@@ -1,0 +1,17 @@
+.autocomplete-list {
+  position: relative;
+  list-style: none;
+  margin-top: 0.2rem;
+  padding-left: 0;
+  max-width: 100%;
+  z-index: 1000;
+}
+
+.autocomplete-list li {
+  padding: 0.5rem;
+  cursor: pointer;
+}
+
+.autocomplete-list li:hover {
+  background-color: #93c5fd; /* azul claro */
+}

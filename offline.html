@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="h-full bg-gray-50">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Offline - Calculadora de Rota</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="icon" type="image/png" href="icons/icon-192.png" />
+  <style>
+    body, html {
+      height: 100%;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+  </style>
+</head>
+<body class="flex flex-col items-center justify-center h-full text-center p-6 select-none bg-gradient-to-br from-blue-50 to-white">
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    class="mx-auto mb-8 h-28 w-28 text-blue-500 animate-pulse"
+    fill="none"
+    viewBox="0 0 24 24"
+    stroke="currentColor"
+    stroke-width="1.8"
+    role="img"
+    aria-label="Ícone de conexão offline"
+  >
+    <path
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      d="M9 12h6m-3-3v6m-6 6a9 9 0 1118 0 9 9 0 01-18 0z"
+    />
+  </svg>
+
+  <h1 class="text-5xl font-extrabold mb-4 text-gray-900 tracking-tight drop-shadow-sm">
+    Você está offline <span aria-hidden="true">😕</span>
+  </h1>
+
+  <p class="mb-8 max-w-md text-gray-700 leading-relaxed">
+    Não foi possível acessar a internet para carregar a rota.<br />
+    Verifique sua conexão e tente novamente.
+  </p>
+
+  <button
+    onclick="location.reload()"
+    class="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 focus:bg-blue-800 focus:outline-none focus:ring-4 focus:ring-blue-300 text-white font-semibold py-3 px-8 rounded-lg shadow-lg transition duration-200"
+    aria-label="Tentar novamente"
+  >
+    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M23 4v6h-6"></path><path d="M1 20v-6h6"></path><path d="M20 14a8 8 0 10-14 0"></path></svg>
+    Tentar Novamente
+  </button>
+
+  <footer class="mt-16 text-gray-400 text-sm select-text">
+    <p>Calculadora de Rota &mdash; <span class="font-semibold">W.B TechLand</span></p>
+  </footer>
+</body>
+</html>
