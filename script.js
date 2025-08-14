@@ -11,17 +11,26 @@ function addParadaField(valor = "") {
   const container = document.getElementById("paradas-container");
   const div = document.createElement("div");
   div.className = "relative flex items-center gap-2 mb-2";
+  const inputId = `parada${paradaCount}`;
+  const listaId = `listaParada${paradaCount}`;
   div.innerHTML = `
     <input type="text" class="parada w-full p-3 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-blue-500"
       placeholder="Endereço da parada"
       autocomplete="off"
-      id="parada${paradaCount}" value="${valor}">
+      id="${inputId}" value="${valor}">
     <button type="button" class="text-red-500 hover:text-red-700" title="Remover parada" onclick="this.parentElement.remove()">✖</button>
-    <ul id="listaParada${paradaCount}" class="autocomplete-list hidden"></ul>
+    <ul id="${listaId}" class="autocomplete-list hidden"></ul>
   `;
   container.appendChild(div);
 
-  div.querySelector("input").addEventListener("input", (e) => autocomplete(e.target, `listaParada${paradaCount}`));
+  div.querySelector("input").addEventListener("input", (e) => autocomplete(e.target, listaId));
+
+  // Fecha autocomplete se clicar fora
+  div.querySelector("input").addEventListener("blur", () => {
+    setTimeout(() => {
+      document.getElementById(listaId).classList.add("hidden");
+    }, 200);
+  });
 }
 
 document.getElementById("btnAddParada").addEventListener("click", () => addParadaField());
@@ -29,11 +38,13 @@ document.getElementById("btnAddParada").addEventListener("click", () => addParad
 window.autocomplete = async function (inputElem, listaId) {
   const text = inputElem.value.trim();
   const lista = document.getElementById(listaId);
-  if (text.length < 3) {
-    lista.innerHTML = "";
-    lista.classList.add("hidden");
-    return;
-  }
+  lista.innerHTML = "";
+  lista.classList.add("hidden");
+
+  if (text.length < 3) return;
+  lista.innerHTML = "<li>Carregando...</li>";
+  lista.classList.remove("hidden");
+
   try {
     const res = await fetch(
       corsProxy +
@@ -42,22 +53,36 @@ window.autocomplete = async function (inputElem, listaId) {
     if (!res.ok) throw new Error("Erro na API de geocodificação");
     const data = await res.json();
     if (!data.features || data.features.length === 0) {
-      lista.innerHTML = "";
-      lista.classList.add("hidden");
+      lista.innerHTML = "<li>Nenhum endereço encontrado</li>";
       return;
     }
     lista.innerHTML = data.features
       .map(
         (f) =>
-          `<li tabindex="0" role="button" aria-label="Selecionar endereço: ${f.properties.label}" onclick="selecionarEndereco('${f.properties.label.replace(/'/g, "\\'")}', '${listaId}')">${f.properties.label}</li>`
+          `<li tabindex="0" role="button" aria-label="Selecionar endereço: ${f.properties.label}" data-label="${f.properties.label}">${f.properties.label}</li>`
       )
       .join("");
-    lista.classList.remove("hidden");
+
+    // Adiciona evento de clique para todos itens
+    lista.querySelectorAll("li").forEach((li) => {
+      li.addEventListener("mousedown", function(e) {
+        inputElem.value = li.getAttribute("data-label");
+        lista.classList.add("hidden");
+      });
+    });
   } catch {
-    lista.innerHTML = "";
-    lista.classList.add("hidden");
+    lista.innerHTML = "<li>Erro ao buscar endereço</li>";
   }
 };
+
+// Evento para fechar lista apenas se clicar fora do campo ou da lista
+document.addEventListener("mousedown", (e) => {
+  document.querySelectorAll(".autocomplete-list").forEach((lista) => {
+    if (!lista.contains(e.target) && !lista.previousElementSibling.contains(e.target)) {
+      lista.classList.add("hidden");
+    }
+  });
+});
 
 window.selecionarEndereco = function (endereco, listaId) {
   const inputId = listaId.replace("lista", "");
@@ -211,13 +236,18 @@ window.onload = () => {
   ["origem", "retirada", "entrega"].forEach((id) => {
     const input = document.getElementById(id);
     input.addEventListener("input", (e) => autocomplete(e.target, `lista${id.charAt(0).toUpperCase() + id.slice(1)}`));
+    input.addEventListener("blur", () => {
+      setTimeout(() => {
+        document.getElementById(`lista${id.charAt(0).toUpperCase() + id.slice(1)}`).classList.add("hidden");
+      }, 200);
+    });
   });
   document.getElementById("btnCalcular").addEventListener("click", calcular);
 
   // Fecha as listas autocomplete se clicar fora
-  document.addEventListener("click", (e) => {
+  document.addEventListener("mousedown", (e) => {
     document.querySelectorAll(".autocomplete-list").forEach((lista) => {
-      if (!lista.contains(e.target)) {
+      if (!lista.contains(e.target) && !lista.previousElementSibling.contains(e.target)) {
         lista.classList.add("hidden");
       }
     });
