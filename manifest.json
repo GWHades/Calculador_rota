@@ -1,10 +1,11 @@
 {
-  "name": "Calculadora de Rota",
+  "name": "Calculadora de Rota W.B TechLand",
   "short_name": "Rota",
-  "start_url": ".",
+  "description": "Projeto PWA para cálculo de rotas com múltiplas paradas, visual moderno e integração com Waze/Google Maps.",
+  "start_url": "index.html",
   "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#0ea5e9",
+  "background_color": "#0284c7",
+  "theme_color": "#0284c7",
   "icons": [
     {
       "src": "icons/icon-192.png",
