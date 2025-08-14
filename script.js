@@ -1,53 +1,51 @@
 const apiKey = "eyJvcmciOiI1YjNjZTM1OTc4NTExMTAwMDFjZjYyNDgiLCJpZCI6IjVmMmY0NTBiNWEwYzRkMTg5NDcxMjIwYjVlYmFhYWJiIiwiaCI6Im11cm11cjY0In0=";
 const corsProxy = "https://cors-anywhere.herokuapp.com/";
 
-// Inicializa mapa Leaflet
 let map = L.map("map").setView([-23.5, -46.6], 7);
 L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
 let layerGroup = L.layerGroup().addTo(map);
 
-// Botão Instalar PWA
-let deferredPrompt;
-const btnInstalar = document.getElementById("btnInstalar");
-window.addEventListener("beforeinstallprompt", (e) => {
-  e.preventDefault();
-  deferredPrompt = e;
-  btnInstalar.classList.remove("hidden");
-});
-btnInstalar.addEventListener("click", async () => {
-  btnInstalar.classList.add("hidden");
-  deferredPrompt.prompt();
-  const { outcome } = await deferredPrompt.userChoice;
-  deferredPrompt = null;
-});
+let paradaCount = 0;
+function addParadaField(valor = "") {
+  paradaCount++;
+  const container = document.getElementById("paradas-container");
+  const div = document.createElement("div");
+  div.className = "relative flex items-center gap-2 mb-2";
+  div.innerHTML = `
+    <input type="text" class="parada w-full p-3 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-blue-500"
+      placeholder="Endereço da parada"
+      autocomplete="off"
+      id="parada${paradaCount}" value="${valor}">
+    <button type="button" class="text-red-500 hover:text-red-700" title="Remover parada" onclick="this.parentElement.remove()">✖</button>
+    <ul id="listaParada${paradaCount}" class="autocomplete-list hidden"></ul>
+  `;
+  container.appendChild(div);
 
-// Função para mostrar lista autocomplete
+  div.querySelector("input").addEventListener("input", (e) => autocomplete(e.target, `listaParada${paradaCount}`));
+}
+
+document.getElementById("btnAddParada").addEventListener("click", () => addParadaField());
+
 window.autocomplete = async function (inputElem, listaId) {
   const text = inputElem.value.trim();
   const lista = document.getElementById(listaId);
-
   if (text.length < 3) {
     lista.innerHTML = "";
     lista.classList.add("hidden");
     return;
   }
-
   try {
     const res = await fetch(
       corsProxy +
-        `https://api.openrouteservice.org/geocode/search?api_key=${apiKey}&text=${encodeURIComponent(
-          text
-        )}&size=5`
+        `https://api.openrouteservice.org/geocode/search?api_key=${apiKey}&text=${encodeURIComponent(text)}&size=5`
     );
     if (!res.ok) throw new Error("Erro na API de geocodificação");
     const data = await res.json();
-
     if (!data.features || data.features.length === 0) {
       lista.innerHTML = "";
       lista.classList.add("hidden");
       return;
     }
-
     lista.innerHTML = data.features
       .map(
         (f) =>
@@ -61,22 +59,18 @@ window.autocomplete = async function (inputElem, listaId) {
   }
 };
 
-// Seleciona endereço da lista autocomplete
 window.selecionarEndereco = function (endereco, listaId) {
-  const inputId = listaId.replace("lista", "").toLowerCase();
+  const inputId = listaId.replace("lista", "");
   const inputElem = document.getElementById(inputId);
   if (!inputElem) return;
   inputElem.value = endereco;
   document.getElementById(listaId).classList.add("hidden");
 };
 
-// Geocodifica endereço para coordenadas [lat, lon]
 window.geocode = async function (endereco) {
   const res = await fetch(
     corsProxy +
-      `https://api.openrouteservice.org/geocode/search?api_key=${apiKey}&text=${encodeURIComponent(
-        endereco
-      )}&size=1`
+      `https://api.openrouteservice.org/geocode/search?api_key=${apiKey}&text=${encodeURIComponent(endereco)}&size=1`
   );
   if (!res.ok) throw new Error("Erro na API de geocodificação");
   const data = await res.json();
@@ -87,7 +81,6 @@ window.geocode = async function (endereco) {
   return [lat, lon];
 };
 
-// Calcula distância e rota entre 2 coordenadas
 window.calcularDistancia = async function (coordA, coordB) {
   const body = {
     coordinates: [
@@ -95,7 +88,6 @@ window.calcularDistancia = async function (coordA, coordB) {
       [coordB[1], coordB[0]],
     ],
   };
-
   const res = await fetch(corsProxy + "https://api.openrouteservice.org/v2/directions/driving-car", {
     method: "POST",
     headers: {
@@ -106,17 +98,14 @@ window.calcularDistancia = async function (coordA, coordB) {
   });
   if (!res.ok) throw new Error("Erro ao calcular rota");
   const data = await res.json();
-
   if (!data.routes || data.routes.length === 0) {
     throw new Error("Rota não encontrada");
   }
-
   const metros = data.routes[0].summary.distance;
   const geo = data.routes[0].geometry;
   return { km: metros / 1000, geometry: geo };
 };
 
-// Função para mostrar spinner enquanto calcula
 function setLoading(isLoading) {
   const resultado = document.getElementById("resultado");
   if (isLoading) {
@@ -133,7 +122,6 @@ function setLoading(isLoading) {
   }
 }
 
-// Função principal de cálculo
 window.calcular = async function () {
   const origem = document.getElementById("origem").value.trim();
   const retirada = document.getElementById("retirada").value.trim();
@@ -141,83 +129,100 @@ window.calcular = async function () {
   const valorKm = parseFloat(document.getElementById("valor_km").value);
   const resultado = document.getElementById("resultado");
   const linkWaze = document.getElementById("linkWaze");
+  const linkMaps = document.getElementById("linkMaps");
+
+  // Coletar paradas intermediárias
+  const paradaInputs = document.querySelectorAll(".parada");
+  const paradas = Array.from(paradaInputs)
+    .map((input) => input.value.trim())
+    .filter((v) => v);
 
   if (!origem || !retirada || !entrega) {
-    resultado.innerHTML =
-      "<p class='text-red-600 font-semibold'>Preencha todos os endereços antes de calcular.</p>";
+    resultado.innerHTML = "<p class='text-red-600 font-semibold'>Preencha todos os endereços antes de calcular.</p>";
     linkWaze.classList.add("hidden");
+    linkMaps.classList.add("hidden");
     return;
   }
   if (isNaN(valorKm) || valorKm <= 0) {
-    resultado.innerHTML =
-      "<p class='text-red-600 font-semibold'>Informe um valor válido para o valor por KM.</p>";
+    resultado.innerHTML = "<p class='text-red-600 font-semibold'>Informe um valor válido para o valor por KM.</p>";
     linkWaze.classList.add("hidden");
+    linkMaps.classList.add("hidden");
     return;
   }
 
   setLoading(true);
   linkWaze.classList.add("hidden");
+  linkMaps.classList.add("hidden");
   layerGroup.clearLayers();
 
   try {
-    const coordOrigem = await geocode(origem);
-    const coordRetirada = await geocode(retirada);
-    const coordEntrega = await geocode(entrega);
+    // Geocodificar todos os pontos (origem, retirada, paradas, entrega)
+    const pontos = [origem, retirada, ...paradas, entrega];
+    const coords = [];
+    for (const ponto of pontos) {
+      coords.push(await geocode(ponto));
+    }
 
-    const trecho1 = await calcularDistancia(coordOrigem, coordRetirada);
-    const trecho2 = await calcularDistancia(coordRetirada, coordEntrega);
+    // Calcular todos os trechos
+    let totalKm = 0;
+    let coordsPolylines = [];
+    for (let i = 0; i < coords.length - 1; i++) {
+      const trecho = await calcularDistancia(coords[i], coords[i + 1]);
+      totalKm += trecho.km;
+      coordsPolylines.push(polyline.decode(trecho.geometry).map((c) => [c[0], c[1]]));
+    }
 
-    const totalKm = trecho1.km + trecho2.km;
     const valorTotal = totalKm * valorKm;
-
     resultado.innerHTML = `
-      <p><strong>Trecho 1:</strong> ${trecho1.km.toFixed(2)} km</p>
-      <p><strong>Trecho 2:</strong> ${trecho2.km.toFixed(2)} km</p>
-      <p><strong>Total:</strong> ${totalKm.toFixed(2)} km</p>
-      <p class="text-xl mt-3 font-semibold text-blue-700"><strong>Valor da Rota:</strong> R$ ${valorTotal.toFixed(
-        2
-      )}</p>
+      <div class="mb-2">
+        <span class="inline-block bg-blue-100 text-blue-700 px-3 py-1 rounded-full font-semibold">Total: ${totalKm.toFixed(2)} km</span>
+      </div>
+      <p class="text-2xl mt-2 font-extrabold text-green-700">Valor da Rota: R$ ${valorTotal.toFixed(2)}</p>
     `;
 
-    const coords1 = polyline.decode(trecho1.geometry).map((c) => [c[0], c[1]]);
-    const coords2 = polyline.decode(trecho2.geometry).map((c) => [c[0], c[1]]);
+    coordsPolylines.forEach((poly) => layerGroup.addLayer(L.polyline(poly, { color: "blue", weight: 5, opacity: 0.7 })));
+    layerGroup.addLayer(L.marker(coords[0]).bindPopup("<b>Origem</b>").openPopup());
+    layerGroup.addLayer(L.marker(coords[coords.length - 1]).bindPopup("<b>Entrega</b>"));
+    coords.slice(1, -1).forEach((c, i) =>
+      layerGroup.addLayer(L.marker(c).bindPopup(`<b>Parada ${i + 1}</b>`))
+    );
+    map.fitBounds(L.latLngBounds(coords), { padding: [50, 50] });
 
-    layerGroup.addLayer(L.polyline(coords1, { color: "blue", weight: 5, opacity: 0.7 }));
-    layerGroup.addLayer(L.polyline(coords2, { color: "green", weight: 5, opacity: 0.7 }));
-    layerGroup.addLayer(L.marker(coordOrigem).bindPopup("<b>Origem</b>").openPopup());
-    layerGroup.addLayer(L.marker(coordRetirada).bindPopup("<b>Retirada</b>"));
-    layerGroup.addLayer(L.marker(coordEntrega).bindPopup("<b>Entrega</b>"));
+    // Google Maps aceita múltiplos pontos
+    const linkGM = "https://www.google.com/maps/dir/" + pontos.map(p => encodeURIComponent(p)).join("/");
+    linkMaps.href = linkGM;
+    linkMaps.classList.remove("hidden");
 
-    map.fitBounds(L.latLngBounds([...coords1, ...coords2]), { padding: [50, 50] });
-
-    const wazeUrl = `https://waze.com/ul?ll=${coordEntrega[0]},${coordEntrega[1]}&navigate=yes`;
+    // Waze só aceita início/fim (destino é entrega)
+    const [lat, lon] = coords[coords.length - 1];
+    const wazeUrl = `https://waze.com/ul?ll=${lat},${lon}&navigate=yes`;
     linkWaze.href = wazeUrl;
     linkWaze.classList.remove("hidden");
   } catch (e) {
-    resultado.innerHTML =
-      `<p class='text-red-600 font-semibold'>Erro ao calcular rota: ${e.message || "Verifique os endereços."}</p>`;
+    resultado.innerHTML = `<p class='text-red-600 font-semibold'>Erro ao calcular rota: ${e.message || "Verifique os endereços."}</p>`;
     linkWaze.classList.add("hidden");
+    linkMaps.classList.add("hidden");
   } finally {
     setLoading(false);
   }
 };
 
-// Eventos de autocomplete e cálculo após carregar a página
 window.onload = () => {
   ["origem", "retirada", "entrega"].forEach((id) => {
     const input = document.getElementById(id);
     input.addEventListener("input", (e) => autocomplete(e.target, `lista${id.charAt(0).toUpperCase() + id.slice(1)}`));
   });
-
   document.getElementById("btnCalcular").addEventListener("click", calcular);
 
   // Fecha as listas autocomplete se clicar fora
   document.addEventListener("click", (e) => {
-    ["listaOrigem", "listaRetirada", "listaEntrega"].forEach((listaId) => {
-      const lista = document.getElementById(listaId);
+    document.querySelectorAll(".autocomplete-list").forEach((lista) => {
       if (!lista.contains(e.target)) {
         lista.classList.add("hidden");
       }
     });
   });
+
+  // Adiciona um campo de parada por padrão
+  addParadaField();
 };
