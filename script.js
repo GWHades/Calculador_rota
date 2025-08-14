@@ -1,4 +1,4 @@
-const apiKey = "eyJvcmciOiI1YjNjZTM1OTc4NTExMTAwMDFjZjYyNDgiLCJpZCI6IjVmMmY0NTBiNWEwYzRkMTg5NDcxMjIwYjVlYmFhYWJiIiwiaCI6Im11cm11cjY0In0=";
+const apiKey = "eyJvcmciOiI1YjNjZTM1OTc4NTExMTAwMDFjZjYyNDgiLCJpZCI6ImQyYWE4ZTBjMjM0ODZhY2U3MDE0MWZlODhjZGEzOGQ3YWI3Y2ZlMWI2MjYzNWJmMWYyNDEyNzNlIiwiaCI6Im11cm11cjY0In0=";
 const corsProxy = "https://cors-anywhere.herokuapp.com/";
 
 let map = L.map("map").setView([-23.5, -46.6], 7);
